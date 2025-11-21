@@ -1,4 +1,4 @@
-import React from 'react';
+/*import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { MessageCircle, UserPlus, Mars, Venus } from 'lucide-react-native';
 
@@ -206,4 +206,240 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-SemiBold',
     color: '#FFFFFF',
   },
+});*/
+
+import React from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { MessageCircle, UserPlus, Mars, Venus } from 'lucide-react-native';
+
+interface User {
+  id: string;
+  fullName: string;
+  handle: string;
+  age: number;
+  gender: string;
+  country: string;
+  city: string;
+  bio: string;
+  profilePicUrl: string;
+  onlineStatus: boolean;
+}
+
+interface UserCardProps {
+  user: User;
+  onChatPress: () => void;
+  onProfilePress: () => void;
+  onFriendPress: () => void;
+}
+
+export function UserCard({ user, onChatPress, onProfilePress, onFriendPress }: UserCardProps) {
+  const getCountryFlag = (country: string) => {
+    const flags: { [key: string]: string } = {
+      USA: '🇺🇸',
+      Canada: '🇨🇦',
+      UK: '🇬🇧',
+      Australia: '🇦🇺',
+      Germany: '🇩🇪',
+      France: '🇫🇷',
+      Japan: '🇯🇵',
+      Brazil: '🇧🇷',
+    };
+    return flags[country] || '🌍';
+  };
+
+  return (
+    <TouchableOpacity style={styles.card} onPress={onProfilePress}>
+
+      {/* TOP IMAGE AREA */}
+      <View style={styles.imageContainer}>
+        <Image source={{ uri: user.profilePicUrl }} style={styles.profileImage} />
+
+        {/* Status Badge */}
+        <View style={styles.statusBadge}>
+          <View
+            style={[
+              styles.statusDot,
+              user.onlineStatus ? styles.online : styles.offline,
+            ]}
+          />
+          <Text style={styles.statusText}>
+            {user.onlineStatus ? 'Online' : 'Offline'}
+          </Text>
+        </View>
+      </View>
+
+      {/* CONTENT AREA */}
+      <View style={styles.content}>
+        {/* Name + Gender */}
+        <View style={styles.nameRow}>
+          <Text style={styles.name} numberOfLines={1}>
+            {user.fullName}
+          </Text>
+          {user.gender === 'Male' ? (
+            <Mars color="#767676" size={14} />
+          ) : (
+            <Venus color="#767676" size={14} />
+          )}
+        </View>
+
+        <Text style={styles.handle}>{user.handle}</Text>
+
+        {/* Age + Country */}
+        <View style={styles.locationRow}>
+          <Text style={styles.age}>
+            {user.age} • {getCountryFlag(user.country)}
+          </Text>
+        </View>
+
+        {/* Bio */}
+        <Text style={styles.bio} numberOfLines={1}>
+          {user.bio}
+        </Text>
+
+        {/* Buttons */}
+        <View style={styles.buttonRow}>
+          <TouchableOpacity style={styles.friendButton} onPress={onFriendPress}>
+            <Text style={styles.friendButtonText}>Friend</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.chatButton} onPress={onChatPress}>
+            <Text style={styles.chatButtonText}>Chat</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+    </TouchableOpacity>
+  );
+}
+
+const styles = StyleSheet.create({
+  card: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 3,
+    marginBottom: 20,
+  },
+
+  /* IMAGE */
+  imageContainer: {
+    position: 'relative',
+    backgroundColor: '#F6EDE2',
+  },
+  profileImage: {
+    width: '100%',
+    height: 170,
+    resizeMode: 'cover',
+  },
+
+  /* STATUS BADGE */
+  statusBadge: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 16,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 4,
+  },
+  online: {
+    backgroundColor: '#3ED65F',
+  },
+  offline: {
+    backgroundColor: '#A0A0A0',
+  },
+  statusText: {
+    color: '#fff',
+    fontSize: 11,
+    fontFamily: 'Inter-Medium',
+  },
+
+  /* CONTENT */
+  content: {
+    padding: 16,
+  },
+
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 2,
+    gap: 4,
+  },
+  name: {
+    fontSize: 17,
+    fontFamily: 'Inter-SemiBold',
+    color: '#1A1A1A',
+    flex: 1,
+  },
+  handle: {
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+    color: '#787878',
+    marginBottom: 6,
+  },
+
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  age: {
+    fontSize: 14,
+    color: '#787878',
+    fontFamily: 'Inter-Regular',
+  },
+
+  bio: {
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+    color: '#6B6B6B',
+    marginBottom: 14,
+  },
+
+  buttonRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+
+  /* FRIEND BUTTON */
+  friendButton: {
+    flex: 1,
+    backgroundColor: '#EDEBFF',
+    paddingVertical: 12,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  friendButtonText: {
+    color: '#1D1AFF',
+    fontSize: 14,
+    fontFamily: 'Inter-SemiBold',
+  },
+
+  /* CHAT BUTTON */
+  chatButton: {
+    flex: 1,
+    backgroundColor: '#1D1AFF',
+    paddingVertical: 12,
+    borderRadius: 14,
+    alignItems: 'center',
+  },
+  chatButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontFamily: 'Inter-SemiBold',
+  },
 });
+
