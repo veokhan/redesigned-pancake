@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { MessageCircle, Globe } from 'lucide-react-native';
+import { MessageCircle } from 'lucide-react-native';
 
 interface PrivateChat {
   id: string;
@@ -78,23 +78,6 @@ export default function ChatsScreen() {
       </View>
 
       <ScrollView style={styles.content}>
-        {/* Global Chat Card */}
-        <TouchableOpacity 
-          style={styles.globalChatCard}
-          onPress={() => router.push('/(tabs)/global-chat-room')}
-        >
-          <View style={styles.globalChatIcon}>
-            <Globe color="#FFFFFF" size={24} />
-          </View>
-          <View style={styles.globalChatContent}>
-            <Text style={styles.globalChatTitle}>Global Chat</Text>
-            <Text style={styles.globalChatSubtitle}>Join the community conversation</Text>
-          </View>
-          <View style={styles.globalChatBadge}>
-            <Text style={styles.badgeText}>LIVE</Text>
-          </View>
-        </TouchableOpacity>
-
         {/* Private Chats Section */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Private Messages</Text>
@@ -164,49 +147,6 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-  },
-  globalChatCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    margin: 16,
-    padding: 16,
-    backgroundColor: '#2D63FF',
-    borderRadius: 16,
-  },
-  globalChatIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  globalChatContent: {
-    flex: 1,
-  },
-  globalChatTitle: {
-    fontSize: 18,
-    fontFamily: 'Inter-SemiBold',
-    color: '#FFFFFF',
-    marginBottom: 2,
-  },
-  globalChatSubtitle: {
-    fontSize: 14,
-    fontFamily: 'Inter-Regular',
-    color: 'rgba(255, 255, 255, 0.8)',
-  },
-  globalChatBadge: {
-    backgroundColor: '#FF4757',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  badgeText: {
-    fontSize: 10,
-    fontFamily: 'Inter-Bold',
-    color: '#FFFFFF',
-    letterSpacing: 0.5,
   },
   sectionHeader: {
     paddingHorizontal: 24,
