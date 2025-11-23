@@ -1,55 +1,134 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
+import React, { useState, useRef } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { MessageCircle } from 'lucide-react-native';
+import { ArrowLeft, Search, Smile, Paperclip, Send } from 'lucide-react-native';
 
 interface PrivateChat {
   id: string;
   userId: string;
   userName: string;
-  handle: string;
-  profilePicUrl: string;
   lastMessage: string;
   lastMessageTime: Date;
   unreadCount: number;
   onlineStatus: boolean;
+  profilePicUrl: string;
+}
+
+interface GlobalMessage {
+  id: string;
+  userId: string;
+  userName: string;
+  text: string;
+  timestamp: Date;
+  profilePicUrl: string;
+  isCurrentUser: boolean;
+  isSystemMessage?: boolean;
 }
 
 export default function ChatsScreen() {
+  const [activeTab, setActiveTab] = useState<'global' | 'private'>('private');
+  const [message, setMessage] = useState('');
+  const scrollViewRef = useRef<ScrollView>(null);
+
   const [privateChats] = useState<PrivateChat[]>([
     {
       id: '1',
       userId: '1',
-      userName: 'Ethan Carter',
-      handle: '@ethan_carter',
+      userName: 'Alex Stanton',
       profilePicUrl: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg',
-      lastMessage: 'That sounds like a great idea! Let me know when you want to start.',
-      lastMessageTime: new Date(Date.now() - 1000 * 60 * 15), // 15 minutes ago
+      lastMessage: 'Sounds good, see you then!',
+      lastMessageTime: new Date(Date.now() - 1000 * 60 * 15),
       unreadCount: 2,
       onlineStatus: true,
     },
     {
       id: '2',
       userId: '2',
-      userName: 'Sophia Bennett',
-      handle: '@sophia_b',
+      userName: 'Beatrice Miller',
       profilePicUrl: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg',
-      lastMessage: 'Thanks for the feedback on my artwork! Really appreciate it.',
-      lastMessageTime: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
+      lastMessage: "That sounds lovely! I'm in.",
+      lastMessageTime: new Date(Date.now() - 1000 * 60 * 60 * 24),
       unreadCount: 0,
       onlineStatus: false,
     },
     {
       id: '3',
       userId: '3',
-      userName: 'Liam Harper',
-      handle: '@liam_h',
+      userName: 'Carlos Gomez',
       profilePicUrl: 'https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg',
-      lastMessage: 'The hiking trail was amazing! You should definitely join next time.',
-      lastMessageTime: new Date(Date.now() - 1000 * 60 * 60 * 24), // 1 day ago
-      unreadCount: 1,
+      lastMessage: "You: Great, I'll bring the chips.",
+      lastMessageTime: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2),
+      unreadCount: 0,
+      onlineStatus: false,
+    },
+    {
+      id: '4',
+      userId: '4',
+      userName: 'Daniela',
+      profilePicUrl: 'https://images.pexels.com/photos/1130626/pexels-photo-1130626.jpeg',
+      lastMessage: 'Park sounds great.',
+      lastMessageTime: new Date(Date.now() - 1000 * 60 * 60 * 24 * 4),
+      unreadCount: 0,
       onlineStatus: true,
+    },
+  ]);
+
+  const [globalMessages] = useState<GlobalMessage[]>([
+    {
+      id: '1',
+      userId: '1',
+      userName: 'Alex Stanton',
+      profilePicUrl: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg',
+      text: "Hey everyone, what's the plan for the weekend?",
+      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2),
+      isCurrentUser: false,
+    },
+    {
+      id: '2',
+      userId: 'current',
+      userName: 'You',
+      profilePicUrl: 'https://images.pexels.com/photos/1040880/pexels-photo-1040880.jpeg',
+      text: "I was thinking of heading to the park if the weather's good!",
+      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 1.95),
+      isCurrentUser: true,
+    },
+    {
+      id: '3',
+      userId: '2',
+      userName: 'Beatrice Miller',
+      profilePicUrl: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg',
+      text: "That sounds lovely! I'm in.",
+      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 1.9),
+      isCurrentUser: false,
+    },
+    {
+      id: '4',
+      userId: '3',
+      userName: 'Carlos Gomez',
+      profilePicUrl: 'https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg',
+      text: 'Count me in too! Should we bring some snacks?',
+      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 1.85),
+      isCurrentUser: false,
+    },
+    {
+      id: '5',
+      userId: 'system',
+      userName: 'System',
+      profilePicUrl: '',
+      text: 'Daniela has joined the chat',
+      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 1.8),
+      isCurrentUser: false,
+      isSystemMessage: true,
+    },
+    {
+      id: '6',
+      userId: '4',
+      userName: 'Daniela',
+      profilePicUrl: 'https://images.pexels.com/photos/1130626/pexels-photo-1130626.jpeg',
+      text: 'Hey everyone! Park sounds great.',
+      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 1.75),
+      isCurrentUser: false,
     },
   ]);
 
@@ -63,36 +142,66 @@ export default function ChatsScreen() {
       const diffMins = Math.floor(diffMs / (1000 * 60));
       return diffMins < 1 ? 'now' : `${diffMins}m`;
     } else if (diffDays < 1) {
-      return `${diffHours}h`;
+      return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    } else if (diffDays === 1) {
+      return 'Yesterday';
     } else if (diffDays < 7) {
-      return `${diffDays}d`;
+      return `${diffDays}d ago`;
     } else {
       return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     }
   };
 
+  const formatMessageTime = (date: Date) => {
+    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  };
+
+  const sendMessage = () => {
+    if (message.trim()) {
+      setMessage('');
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Chats</Text>
+        <TouchableOpacity style={styles.headerButton}>
+          <ArrowLeft color="#1A1A1A" size={24} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Chat</Text>
+        <TouchableOpacity style={styles.headerButton}>
+          <Search color="#1A1A1A" size={24} />
+        </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.content}>
-        {/* Private Chats Section */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Private Messages</Text>
-        </View>
+      {/* Tabs */}
+      <View style={styles.tabContainer}>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'global' && styles.tabActive]}
+          onPress={() => setActiveTab('global')}
+        >
+          <Text style={[styles.tabText, activeTab === 'global' && styles.tabTextActive]}>
+            Global
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'private' && styles.tabActive]}
+          onPress={() => setActiveTab('private')}
+        >
+          <Text style={[styles.tabText, activeTab === 'private' && styles.tabTextActive]}>
+            Private
+          </Text>
+        </TouchableOpacity>
+      </View>
 
-        {privateChats.length === 0 ? (
-          <View style={styles.emptyState}>
-            <MessageCircle color="#CCCCCC" size={48} />
-            <Text style={styles.emptyStateTitle}>No conversations yet</Text>
-            <Text style={styles.emptyStateText}>
-              Start chatting with people you meet in the Explore section
-            </Text>
-          </View>
-        ) : (
-          privateChats.map((chat) => (
+      {/* Content */}
+      {activeTab === 'private' ? (
+        <ScrollView style={styles.content}>
+          {privateChats.map((chat) => (
             <TouchableOpacity
               key={chat.id}
               style={styles.chatItem}
@@ -100,7 +209,7 @@ export default function ChatsScreen() {
             >
               <View style={styles.chatAvatar}>
                 <Image source={{ uri: chat.profilePicUrl }} style={styles.avatarImage} />
-                <View style={[styles.onlineIndicator, chat.onlineStatus ? styles.online : styles.offline]} />
+                {chat.onlineStatus && <View style={styles.onlineIndicator} />}
               </View>
 
               <View style={styles.chatContent}>
@@ -108,7 +217,6 @@ export default function ChatsScreen() {
                   <Text style={styles.chatName}>{chat.userName}</Text>
                   <Text style={styles.chatTime}>{formatTime(chat.lastMessageTime)}</Text>
                 </View>
-                <Text style={styles.chatHandle}>{chat.handle}</Text>
                 <Text style={styles.lastMessage} numberOfLines={1}>
                   {chat.lastMessage}
                 </Text>
@@ -116,15 +224,109 @@ export default function ChatsScreen() {
 
               {chat.unreadCount > 0 && (
                 <View style={styles.unreadBadge}>
-                  <Text style={styles.unreadText}>
-                    {chat.unreadCount > 99 ? '99+' : chat.unreadCount}
-                  </Text>
+                  <Text style={styles.unreadText}>{chat.unreadCount}</Text>
                 </View>
               )}
             </TouchableOpacity>
-          ))
-        )}
-      </ScrollView>
+          ))}
+        </ScrollView>
+      ) : (
+        <KeyboardAvoidingView
+          style={styles.globalChatContainer}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+        >
+          <ScrollView
+            ref={scrollViewRef}
+            style={styles.messagesContainer}
+            contentContainerStyle={styles.messagesContent}
+          >
+            {globalMessages.map((msg) => {
+              if (msg.isSystemMessage) {
+                return (
+                  <View key={msg.id} style={styles.systemMessageContainer}>
+                    <Text style={styles.systemMessageText}>{msg.text}</Text>
+                  </View>
+                );
+              }
+
+              return (
+                <View
+                  key={msg.id}
+                  style={[
+                    styles.messageRow,
+                    msg.isCurrentUser && styles.messageRowReverse,
+                  ]}
+                >
+                  {!msg.isCurrentUser && (
+                    <Image source={{ uri: msg.profilePicUrl }} style={styles.messageAvatar} />
+                  )}
+                  <View
+                    style={[
+                      styles.messageBubbleContainer,
+                      msg.isCurrentUser && styles.messageBubbleContainerRight,
+                    ]}
+                  >
+                    {!msg.isCurrentUser && (
+                      <Text style={styles.messageSender}>
+                        {msg.userName} {formatMessageTime(msg.timestamp)}
+                      </Text>
+                    )}
+                    {msg.isCurrentUser && (
+                      <Text style={styles.messageSenderRight}>
+                        You {formatMessageTime(msg.timestamp)}
+                      </Text>
+                    )}
+                    <View
+                      style={[
+                        styles.messageBubble,
+                        msg.isCurrentUser ? styles.messageBubbleUser : styles.messageBubbleOther,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.messageText,
+                          msg.isCurrentUser && styles.messageTextUser,
+                        ]}
+                      >
+                        {msg.text}
+                      </Text>
+                    </View>
+                  </View>
+                  {msg.isCurrentUser && (
+                    <Image source={{ uri: msg.profilePicUrl }} style={styles.messageAvatar} />
+                  )}
+                </View>
+              );
+            })}
+          </ScrollView>
+
+          {/* Input Area */}
+          <View style={styles.inputContainer}>
+            <TouchableOpacity style={styles.inputButton}>
+              <Smile color="#8E8E93" size={24} />
+            </TouchableOpacity>
+            <TextInput
+              style={styles.input}
+              placeholder="Type a message..."
+              placeholderTextColor="#999999"
+              value={message}
+              onChangeText={setMessage}
+              multiline
+            />
+            <TouchableOpacity style={styles.inputButton}>
+              <Paperclip color="#8E8E93" size={24} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.sendButton}
+              onPress={sendMessage}
+              disabled={!message.trim()}
+            >
+              <Send color="#FFFFFF" size={20} />
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      )}
     </SafeAreaView>
   );
 }
@@ -132,85 +334,84 @@ export default function ChatsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F5F5F5',
   },
   header: {
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#FFFFFF',
+  },
+  headerButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerTitle: {
-    fontSize: 24,
-    fontFamily: 'Inter-Bold',
+    fontSize: 18,
+    fontFamily: 'Inter-SemiBold',
+    color: '#1A1A1A',
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 8,
+    backgroundColor: '#FFFFFF',
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderRadius: 24,
+    backgroundColor: '#F0F0F0',
+  },
+  tabActive: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  tabText: {
+    fontSize: 15,
+    fontFamily: 'Inter-Medium',
+    color: '#666666',
+  },
+  tabTextActive: {
     color: '#1A1A1A',
   },
   content: {
     flex: 1,
-  },
-  sectionHeader: {
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontFamily: 'Inter-SemiBold',
-    color: '#666666',
-  },
-  emptyState: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-    paddingHorizontal: 40,
-  },
-  emptyStateTitle: {
-    fontSize: 18,
-    fontFamily: 'Inter-SemiBold',
-    color: '#1A1A1A',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  emptyStateText: {
-    fontSize: 14,
-    fontFamily: 'Inter-Regular',
-    color: '#666666',
-    textAlign: 'center',
-    lineHeight: 20,
+    backgroundColor: '#FFFFFF',
   },
   chatItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F5F7FA',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    backgroundColor: '#FFFFFF',
   },
   chatAvatar: {
     position: 'relative',
     marginRight: 12,
   },
   avatarImage: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
   },
   onlineIndicator: {
     position: 'absolute',
-    bottom: 2,
-    right: 2,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    borderWidth: 3,
-    borderColor: '#FFFFFF',
-  },
-  online: {
+    bottom: 0,
+    right: 0,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
     backgroundColor: '#4CAF50',
-  },
-  offline: {
-    backgroundColor: '#999999',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
   },
   chatContent: {
     flex: 1,
@@ -219,7 +420,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 2,
+    marginBottom: 4,
   },
   chatName: {
     fontSize: 16,
@@ -227,35 +428,140 @@ const styles = StyleSheet.create({
     color: '#1A1A1A',
   },
   chatTime: {
-    fontSize: 12,
+    fontSize: 13,
     fontFamily: 'Inter-Regular',
     color: '#999999',
-  },
-  chatHandle: {
-    fontSize: 12,
-    fontFamily: 'Inter-Regular',
-    color: '#666666',
-    marginBottom: 4,
   },
   lastMessage: {
     fontSize: 14,
     fontFamily: 'Inter-Regular',
     color: '#666666',
-    lineHeight: 18,
   },
   unreadBadge: {
     backgroundColor: '#2D63FF',
-    minWidth: 24,
-    height: 24,
-    borderRadius: 12,
+    minWidth: 22,
+    height: 22,
+    borderRadius: 11,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 8,
+    paddingHorizontal: 6,
     marginLeft: 8,
   },
   unreadText: {
     fontSize: 12,
     fontFamily: 'Inter-Bold',
     color: '#FFFFFF',
+  },
+  globalChatContainer: {
+    flex: 1,
+    backgroundColor: '#F5F5F5',
+  },
+  messagesContainer: {
+    flex: 1,
+  },
+  messagesContent: {
+    padding: 16,
+  },
+  systemMessageContainer: {
+    alignItems: 'center',
+    marginVertical: 12,
+  },
+  systemMessageText: {
+    fontSize: 13,
+    fontFamily: 'Inter-Regular',
+    color: '#999999',
+  },
+  messageRow: {
+    flexDirection: 'row',
+    marginBottom: 16,
+    alignItems: 'flex-start',
+  },
+  messageRowReverse: {
+    flexDirection: 'row-reverse',
+  },
+  messageAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    marginHorizontal: 8,
+  },
+  messageBubbleContainer: {
+    flex: 1,
+    alignItems: 'flex-start',
+  },
+  messageBubbleContainerRight: {
+    alignItems: 'flex-end',
+  },
+  messageSender: {
+    fontSize: 13,
+    fontFamily: 'Inter-Medium',
+    color: '#1A1A1A',
+    marginBottom: 4,
+    marginLeft: 4,
+  },
+  messageSenderRight: {
+    fontSize: 13,
+    fontFamily: 'Inter-Medium',
+    color: '#1A1A1A',
+    marginBottom: 4,
+    marginRight: 4,
+  },
+  messageBubble: {
+    maxWidth: '80%',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 20,
+  },
+  messageBubbleOther: {
+    backgroundColor: '#EFEFEF',
+    borderTopLeftRadius: 4,
+  },
+  messageBubbleUser: {
+    backgroundColor: '#2D63FF',
+    borderTopRightRadius: 4,
+  },
+  messageText: {
+    fontSize: 15,
+    fontFamily: 'Inter-Regular',
+    color: '#1A1A1A',
+    lineHeight: 20,
+  },
+  messageTextUser: {
+    color: '#FFFFFF',
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: '#E0E0E0',
+  },
+  inputButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  input: {
+    flex: 1,
+    backgroundColor: '#F5F5F5',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    fontSize: 15,
+    fontFamily: 'Inter-Regular',
+    color: '#1A1A1A',
+    maxHeight: 100,
+  },
+  sendButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#2D63FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 8,
   },
 });
