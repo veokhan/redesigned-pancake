@@ -191,13 +191,13 @@ const styles = StyleSheet.create({
   friendButtonText: {
     fontSize: 13,
     fontFamily: 'Inter-SemiBold',
-    color: '#0000FF',
+    color: '#3F51B5',
   },
   chatButton: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#0000FF',
+    backgroundColor: '#3F51B5',
     borderRadius: 12,
     paddingVertical: 10,
   },
@@ -423,7 +423,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   friendButtonText: {
-    color: '#1D1AFF',
+    color: '#3F51B5',
     fontSize: 14,
     fontFamily: 'Inter-SemiBold',
   },
@@ -431,7 +431,7 @@ const styles = StyleSheet.create({
   /* CHAT BUTTON */
   chatButton: {
     flex: 1,
-    backgroundColor: '#1D1AFF',
+    backgroundColor: '#3F51B5',
     paddingVertical: 12,
     borderRadius: 14,
     alignItems: 'center',
