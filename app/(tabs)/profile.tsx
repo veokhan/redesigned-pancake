@@ -1,405 +1,570 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
-import { ArrowLeft, Pencil, ChevronDown } from 'lucide-react-native';
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  ScrollView,
+  Alert,
+  Image,
+  Modal,
+  StyleSheet,
+  FlatList,
+} from "react-native";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Edit2, ChevronDown } from "lucide-react-native";
+import * as ImagePicker from "expo-image-picker";
 
-export default function CompleteProfileScreen() {
-  const [profileData, setProfileData] = useState({
-    name: 'John Doe',
-    handle: '@johndoe',
-    age: '25',
-    gender: 'Male',
-    city: 'New York',
-    country: 'USA',
-    bio: '',
-    profilePicUrl: 'https://images.pexels.com/photos/1130626/pexels-photo-1130626.jpeg',
-  });
+const defaultAvatar = require("../../assets/default-avatar.png");
 
-  const [selectedTab, setSelectedTab] = useState<'education' | 'work'>('education');
-  const [institutionName, setInstitutionName] = useState('');
-  const [showGenderDropdown, setShowGenderDropdown] = useState(false);
+export default function MyProfileScreen() {
+  const [profileImage, setProfileImage] = useState(defaultAvatar);
+  const [fullName] = useState("John Doe");
+  const [handle] = useState("@johndoe");
+  const [age] = useState("25");
+  const [gender] = useState("Male");
+  const [location] = useState("New York, USA");
+  const [bio, setBio] = useState("");
+  const [occupationType, setOccupationType] = useState<"education" | "work">("education");
+  const [institution, setInstitution] = useState("");
+  const [role, setRole] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [focusedField, setFocusedField] = useState<string | null>(null);
+  const [degreeDropdownVisible, setDegreeDropdownVisible] = useState(false);
+  const [intermediateDropdownVisible, setIntermediateDropdownVisible] = useState(false);
+  const [selectedDegree, setSelectedDegree] = useState("");
+  const [selectedIntermediateGroup, setSelectedIntermediateGroup] = useState("");
+  const [savedInstitutions, setSavedInstitutions] = useState<string[]>([]);
+  const [savedCompanies, setSavedCompanies] = useState<string[]>([]);
+  const [filteredSuggestions, setFilteredSuggestions] = useState<string[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
-  const genderOptions = ['Male', 'Female', 'Other', 'Prefer not to say'];
+  React.useEffect(() => {
+    loadData();
+  }, []);
 
-  const updateField = (field: string, value: string) => {
-    setProfileData(prev => ({ ...prev, [field]: value }));
+  const loadData = async () => {
+    try {
+      const storedInstitutions = await AsyncStorage.getItem('saved_institutions');
+      if (storedInstitutions) {
+        setSavedInstitutions(JSON.parse(storedInstitutions));
+      }
+      const storedCompanies = await AsyncStorage.getItem('saved_companies');
+      if (storedCompanies) {
+        setSavedCompanies(JSON.parse(storedCompanies));
+      }
+    } catch (e) {
+      console.error("Failed to load data", e);
+    }
   };
 
-  const handleContinue = () => {
-    console.log('Profile data:', profileData);
-    console.log('Selected tab:', selectedTab);
-    console.log('Institution:', institutionName);
+  const handleInstitutionChange = (text: string) => {
+    setInstitution(text);
+    if (text.length > 0) {
+      const source = occupationType === "education" ? savedInstitutions : savedCompanies;
+      const filtered = source.filter((item) =>
+        item.toLowerCase().includes(text.toLowerCase())
+      );
+      setFilteredSuggestions(filtered);
+      setShowSuggestions(true);
+    } else {
+      setShowSuggestions(false);
+    }
   };
+
+  const selectInstitution = (name: string) => {
+    setInstitution(name);
+    setShowSuggestions(false);
+  };
+
+  const degreeOptions = ["Primary", "Middle", "Matric", "Intermediate"];
+  const intermediateOptions = [
+    "F.Sc (Pre-Medical)",
+    "F.Sc (Pre-Engineering)",
+    "F.A (Arts / Humanities)",
+    "ICS (Computer Science)",
+    "I.Com (Commerce)",
+    "DAE (Diploma of Associate Engineering)",
+  ];
+
+  const pickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 1,
+    });
+
+    if (!result.canceled) {
+      setProfileImage({ uri: result.assets[0].uri });
+    }
+  };
+
+  const handleSave = async () => {
+    if (institution) {
+      if (occupationType === "education") {
+        const newInstitutions = Array.from(new Set([...savedInstitutions, institution]));
+        setSavedInstitutions(newInstitutions);
+        AsyncStorage.setItem('saved_institutions', JSON.stringify(newInstitutions)).catch(e => console.error(e));
+      } else {
+        const newCompanies = Array.from(new Set([...savedCompanies, institution]));
+        setSavedCompanies(newCompanies);
+        AsyncStorage.setItem('saved_companies', JSON.stringify(newCompanies)).catch(e => console.error(e));
+      }
+    }
+
+    setLoading(true);
+    try {
+      await new Promise((r) => setTimeout(r, 1000));
+      Alert.alert("Success", "Profile updated successfully!");
+    } catch {
+      Alert.alert("Error", "Failed to save profile. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getBorderColor = (field: string) =>
+    focusedField === field ? "#3F51B5" : "#CBD5E1";
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>My Profile</Text>
-        <View style={styles.headerSpacer} />
+        <View style={{ width: 24 }} />
       </View>
 
-      <KeyboardAvoidingView
-        style={styles.keyboardView}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      <ScrollView
+        style={styles.content}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 120 }}
       >
-        <ScrollView
-          style={styles.content}
-          contentContainerStyle={styles.contentContainer}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Profile Photo Section */}
-          <View style={styles.photoSection}>
-            <View style={styles.photoContainer}>
-              <Image source={{ uri: profileData.profilePicUrl }} style={styles.profilePhoto} />
-              <TouchableOpacity style={styles.editPhotoButton}>
-                <Pencil color="#FFFFFF" size={16} />
+        <View style={styles.profileSection}>
+          <View style={styles.imageContainer}>
+            <Image source={profileImage} style={styles.profileImage} />
+            <TouchableOpacity style={styles.editButton} onPress={pickImage}>
+              <Edit2 size={16} color="white" />
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.profileTitle}>Add a profile photo</Text>
+          <Text style={styles.profileSubtitle}>
+            This helps people recognize you.
+          </Text>
+        </View>
+
+        <View style={styles.form}>
+          <View style={styles.row}>
+            <View style={styles.halfInput}>
+              <Text style={styles.label}>Name</Text>
+              <View style={styles.readOnlyField}>
+                <Text style={styles.readOnlyText}>{fullName}</Text>
+              </View>
+            </View>
+            <View style={styles.halfInput}>
+              <Text style={styles.label}>Handle</Text>
+              <View style={styles.readOnlyField}>
+                <Text style={styles.readOnlyText}>{handle}</Text>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.row}>
+            <View style={styles.halfInput}>
+              <Text style={styles.label}>Age</Text>
+              <View style={styles.readOnlyField}>
+                <Text style={styles.readOnlyText}>{age}</Text>
+              </View>
+            </View>
+            <View style={styles.halfInput}>
+              <Text style={styles.label}>Gender</Text>
+              <View style={styles.readOnlyField}>
+                <Text style={styles.readOnlyText}>{gender}</Text>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.fullInput}>
+            <Text style={styles.label}>Location</Text>
+            <View style={styles.readOnlyField}>
+              <Text style={styles.readOnlyText}>{location}</Text>
+            </View>
+          </View>
+
+          <View style={styles.fullInput}>
+            <Text style={styles.label}>Bio</Text>
+            <TextInput
+              style={[
+                styles.input,
+                styles.bioInput,
+                { borderColor: getBorderColor("bio") },
+              ]}
+              placeholder="Short bio (100 characters max)"
+              placeholderTextColor="#a0a0c0"
+              value={bio}
+              onChangeText={(text) => {
+                if (text.length <= 100) {
+                  setBio(text);
+                }
+              }}
+              multiline
+              numberOfLines={3}
+              maxLength={100}
+              onFocus={() => setFocusedField("bio")}
+              onBlur={() => setFocusedField(null)}
+            />
+          </View>
+
+          <View style={styles.divider} />
+
+          <View style={styles.occupation}>
+            <View style={styles.radioGroup}>
+              <TouchableOpacity
+                style={styles.radioButton}
+                onPress={() => setOccupationType("education")}
+              >
+                <View
+                  style={[
+                    styles.radioOuter,
+                    occupationType === "education" && styles.radioOuterSelected,
+                  ]}
+                >
+                  {occupationType === "education" && (
+                    <View style={styles.radioInner} />
+                  )}
+                </View>
+                <Text style={styles.radioLabel}>Education</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.radioButton}
+                onPress={() => setOccupationType("work")}
+              >
+                <View
+                  style={[
+                    styles.radioOuter,
+                    occupationType === "work" && styles.radioOuterSelected,
+                  ]}
+                >
+                  {occupationType === "work" && <View style={styles.radioInner} />}
+                </View>
+                <Text style={styles.radioLabel}>Work</Text>
               </TouchableOpacity>
             </View>
-            <Text style={styles.photoTitle}>Add a profile photo</Text>
-            <Text style={styles.photoSubtitle}>This helps people recognize you.</Text>
-          </View>
 
-          {/* Form Fields */}
-          <View style={styles.formSection}>
-            {/* Name and Handle Row */}
-            <View style={styles.formRow}>
-              <View style={styles.formField}>
-                <Text style={styles.fieldLabel}>Name</Text>
-                <TextInput
-                  style={[styles.fieldInput, styles.readOnlyInput]}
-                  value={profileData.name}
-                  editable={false}
-                  placeholder="Your name"
-                  placeholderTextColor="#999999"
-                />
-              </View>
-              <View style={styles.formField}>
-                <Text style={styles.fieldLabel}>Handle</Text>
-                <TextInput
-                  style={[styles.fieldInput, styles.readOnlyInput]}
-                  value={profileData.handle}
-                  editable={false}
-                  placeholder="@username"
-                  placeholderTextColor="#999999"
-                />
-              </View>
-            </View>
-
-            {/* Age and Gender Row */}
-            <View style={styles.formRow}>
-              <View style={styles.formField}>
-                <Text style={styles.fieldLabel}>Age</Text>
-                <TextInput
-                  style={[styles.fieldInput, styles.readOnlyInput]}
-                  value={profileData.age}
-                  editable={false}
-                  placeholder="25"
-                  placeholderTextColor="#999999"
-                  keyboardType="numeric"
-                />
-              </View>
-              <View style={styles.formFieldDropdown}>
-                <Text style={styles.fieldLabel}>Gender</Text>
-                <TouchableOpacity
-                  style={styles.dropdownField}
-                  disabled={true}
-                >
-                  <Text style={[styles.dropdownText, { color: '#999999' }]}>{profileData.gender}</Text>
-                </TouchableOpacity>
-                {showGenderDropdown && (
-                  <View style={styles.dropdownMenu}>
-                    {genderOptions.map((option) => (
-                      <TouchableOpacity
-                        key={option}
-                        style={styles.dropdownOption}
-                        onPress={() => {
-                          updateField('gender', option);
-                          setShowGenderDropdown(false);
-                        }}
-                      >
-                        <Text style={[
-                          styles.dropdownOptionText,
-                          option === profileData.gender && styles.dropdownOptionSelected
-                        ]}>
-                          {option}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                )}
-              </View>
-            </View>
-
-            {/* City and Country Row */}
-            <View style={styles.formRow}>
-              <View style={styles.formField}>
-                <Text style={styles.fieldLabel}>City</Text>
-                <TextInput
-                  style={[styles.fieldInput, styles.readOnlyInput]}
-                  value={profileData.city}
-                  editable={false}
-                  placeholder="Your city"
-                  placeholderTextColor="#999999"
-                />
-              </View>
-              <View style={styles.formField}>
-                <Text style={styles.fieldLabel}>Country</Text>
-                <TextInput
-                  style={[styles.fieldInput, styles.readOnlyInput]}
-                  value={profileData.country}
-                  editable={false}
-                  placeholder="Your country"
-                  placeholderTextColor="#999999"
-                />
-              </View>
-            </View>
-
-            {/* Bio Field */}
-            <View style={styles.bioSection}>
-              <Text style={styles.fieldLabel}>Bio</Text>
+            <View style={styles.fullInput}>
+              <Text style={styles.label}>
+                {occupationType === "education"
+                  ? "Institution Name"
+                  : "Company Name"}
+              </Text>
               <TextInput
-                style={styles.bioInput}
-                value={profileData.bio}
-                onChangeText={(value) => {
-                  if (value.length <= 100) {
-                    updateField('bio', value);
-                  }
+                style={[
+                  styles.input,
+                  { borderColor: getBorderColor("institution") },
+                ]}
+                placeholder={
+                  occupationType === "education"
+                    ? "e.g. Stanford University"
+                    : "e.g. Google"
+                }
+                placeholderTextColor="#a0a0c0"
+                value={institution}
+                onChangeText={handleInstitutionChange}
+                onFocus={() => {
+                  setFocusedField("institution");
+                  if (institution) setShowSuggestions(true);
                 }}
-                placeholder="Short bio (100 characters max)"
-                placeholderTextColor="#999999"
-                multiline
-                maxLength={100}
+                onBlur={() => {
+                  setFocusedField(null);
+                  setTimeout(() => setShowSuggestions(false), 200);
+                }}
               />
+              {showSuggestions && filteredSuggestions.length > 0 && (
+                <View style={styles.suggestionsContainer}>
+                  <FlatList
+                    data={filteredSuggestions}
+                    keyExtractor={(item) => item}
+                    renderItem={({ item }) => (
+                      <TouchableOpacity
+                        style={styles.suggestionItem}
+                        onPress={() => selectInstitution(item)}
+                      >
+                        <Text style={styles.suggestionText}>{item}</Text>
+                      </TouchableOpacity>
+                    )}
+                    scrollEnabled={false}
+                  />
+                </View>
+              )}
             </View>
 
-            {/* Education/Work Toggle */}
-            <View style={styles.toggleSection}>
-              <View style={styles.toggleContainer}>
-                <TouchableOpacity
-                  style={styles.toggleOption}
-                  onPress={() => setSelectedTab('education')}
-                >
-                  <View style={[
-                    styles.radioOuter,
-                    selectedTab === 'education' && styles.radioOuterSelected
-                  ]}>
-                    {selectedTab === 'education' && <View style={styles.radioInner} />}
-                  </View>
-                  <Text style={styles.toggleText}>Education</Text>
-                </TouchableOpacity>
+            <View style={styles.fullInput}>
+              <Text style={styles.label}>
+                {occupationType === "education" ? "Degree Level" : "Role"}
+              </Text>
+              {occupationType === "education" ? (
+                <>
+                  <TouchableOpacity
+                    style={[
+                      styles.dropdown,
+                      { borderColor: getBorderColor("degree") },
+                    ]}
+                    onPress={() => setDegreeDropdownVisible(true)}
+                  >
+                    <Text
+                      style={[
+                        styles.dropdownText,
+                        !selectedDegree && { color: "#a0a0c0" },
+                      ]}
+                    >
+                      {selectedDegree || "Select Degree Level"}
+                    </Text>
+                    <ChevronDown size={20} color="#6B7280" />
+                  </TouchableOpacity>
 
-                <TouchableOpacity
-                  style={styles.toggleOption}
-                  onPress={() => setSelectedTab('work')}
-                >
-                  <View style={[
-                    styles.radioOuter,
-                    selectedTab === 'work' && styles.radioOuterSelected
-                  ]}>
-                    {selectedTab === 'work' && <View style={styles.radioInner} />}
-                  </View>
-                  <Text style={styles.toggleText}>Work</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            {/* Institution Name Field */}
-            <View style={styles.institutionSection}>
-              <Text style={styles.fieldLabel}>Institution Name</Text>
-              <TextInput
-                style={styles.fieldInput}
-                value={institutionName}
-                onChangeText={setInstitutionName}
-                placeholder={selectedTab === 'education' ? 'e.g. Stanford University' : 'e.g. Google Inc.'}
-                placeholderTextColor="#999999"
-              />
+                  {selectedDegree === "Intermediate" && (
+                    <View style={{ marginTop: 16 }}>
+                      <Text style={styles.label}>Intermediate Group</Text>
+                      <TouchableOpacity
+                        style={[
+                          styles.dropdown,
+                          { borderColor: getBorderColor("intermediate") },
+                        ]}
+                        onPress={() => setIntermediateDropdownVisible(true)}
+                      >
+                        <Text
+                          style={[
+                            styles.dropdownText,
+                            !selectedIntermediateGroup && { color: "#a0a0c0" },
+                          ]}
+                        >
+                          {selectedIntermediateGroup || "Select Group"}
+                        </Text>
+                        <ChevronDown size={20} color="#6B7280" />
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </>
+              ) : (
+                <TextInput
+                  style={[
+                    styles.input,
+                    { borderColor: getBorderColor("role") },
+                  ]}
+                  placeholder="e.g. Software Engineer"
+                  placeholderTextColor="#a0a0c0"
+                  value={role}
+                  onChangeText={setRole}
+                  onFocus={() => setFocusedField("role")}
+                  onBlur={() => setFocusedField(null)}
+                />
+              )}
             </View>
           </View>
-        </ScrollView>
-
-        {/* Continue Button */}
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity style={styles.continueButton} onPress={handleContinue}>
-            <Text style={styles.continueButtonText}>Save</Text>
-          </TouchableOpacity>
         </View>
-      </KeyboardAvoidingView>
+      </ScrollView>
+
+      <Modal
+        visible={degreeDropdownVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setDegreeDropdownVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          onPress={() => setDegreeDropdownVisible(false)}
+        >
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Select Degree Level</Text>
+            {degreeOptions.map((option) => (
+              <TouchableOpacity
+                key={option}
+                style={[
+                  styles.modalOption,
+                  selectedDegree === option && styles.modalOptionSelected,
+                ]}
+                onPress={() => {
+                  setSelectedDegree(option);
+                  if (option !== "Intermediate") {
+                    setSelectedIntermediateGroup("");
+                  }
+                  setDegreeDropdownVisible(false);
+                }}
+              >
+                <Text
+                  style={[
+                    styles.modalOptionText,
+                    selectedDegree === option && styles.modalOptionTextSelected,
+                  ]}
+                >
+                  {option}
+                </Text>
+                {selectedDegree === option && (
+                  <Text style={styles.checkmark}>✓</Text>
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      <Modal
+        visible={intermediateDropdownVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIntermediateDropdownVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          onPress={() => setIntermediateDropdownVisible(false)}
+        >
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Select Group</Text>
+            {intermediateOptions.map((option) => (
+              <TouchableOpacity
+                key={option}
+                style={[
+                  styles.modalOption,
+                  selectedIntermediateGroup === option &&
+                  styles.modalOptionSelected,
+                ]}
+                onPress={() => {
+                  setSelectedIntermediateGroup(option);
+                  setIntermediateDropdownVisible(false);
+                }}
+              >
+                <Text
+                  style={[
+                    styles.modalOptionText,
+                    selectedIntermediateGroup === option &&
+                    styles.modalOptionTextSelected,
+                  ]}
+                >
+                  {option}
+                </Text>
+                {selectedIntermediateGroup === option && (
+                  <Text style={styles.checkmark}>✓</Text>
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      <View style={styles.footer}>
+        <TouchableOpacity
+          style={[styles.saveButton, loading && styles.disabledButton]}
+          onPress={handleSave}
+          disabled={loading}
+        >
+          <Text style={styles.saveText}>
+            {loading ? "Saving..." : "Save"}
+          </Text>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F5F5F5',
-  },
+  container: { flex: 1, backgroundColor: "#F8FAFC" },
+
   header: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ece9e9ff',
-    justifyContent: 'center',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 16,
   },
   headerTitle: {
     fontSize: 20,
-    fontFamily: 'Inter-Bold',
-    color: '#1A1A1A',
+    fontWeight: "600",
+    color: "#111827",
   },
-  headerSpacer: {
-    width: 40,
-  },
-  keyboardView: {
-    flex: 1,
-  },
-  content: {
-    flex: 1,
-  },
-  contentContainer: {
-    paddingBottom: 20,
-  },
-  photoSection: {
-    alignItems: 'center',
-    paddingVertical: 24,
-    backgroundColor: '#F5F5F5',
-  },
-  photoContainer: {
-    position: 'relative',
-    marginBottom: 16,
-  },
-  profilePhoto: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: '#E0E0E0',
-  },
-  editPhotoButton: {
-    position: 'absolute',
+
+  content: { paddingHorizontal: 24 },
+
+  profileSection: { alignItems: "center", paddingVertical: 24 },
+  imageContainer: { position: "relative", width: 128, height: 128 },
+  profileImage: { width: "100%", height: "100%", borderRadius: 64 },
+  editButton: {
+    position: "absolute",
     bottom: 0,
     right: 0,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#2D63FF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 3,
-    borderColor: '#F5F5F5',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#3F51B5",
+    alignItems: "center",
+    justifyContent: "center",
   },
-  photoTitle: {
+  profileTitle: {
     fontSize: 18,
-    fontFamily: 'Inter-SemiBold',
-    color: '#1A1A1A',
-    marginBottom: 4,
+    fontWeight: "600",
+    color: "#1E293B",
+    marginTop: 16,
   },
-  photoSubtitle: {
+  profileSubtitle: {
     fontSize: 14,
-    fontFamily: 'Inter-Regular',
-    color: '#666666',
+    color: "#64748B",
+    marginTop: 4,
   },
-  formSection: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 20,
-    paddingTop: 24,
-    paddingBottom: 40,
-    flex: 1,
-  },
-  formRow: {
-    flexDirection: 'row',
+
+  form: { marginTop: 8 },
+
+  row: {
+    flexDirection: "row",
     gap: 16,
-    marginBottom: 20,
+    marginBottom: 16,
   },
-  formField: {
-    flex: 1,
-  },
-  formFieldDropdown: {
-    flex: 1,
-    zIndex: 100,
-  },
-  fieldLabel: {
+  halfInput: { flex: 1 },
+  fullInput: { marginBottom: 16 },
+
+  label: {
     fontSize: 14,
-    fontFamily: 'Inter-Medium',
-    color: '#666666',
+    fontWeight: "500",
+    color: "#64748B",
     marginBottom: 8,
   },
-  fieldInput: {
-    fontSize: 16,
-    fontFamily: 'Inter-Regular',
-    color: '#1A1A1A',
+
+  input: {
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
-    paddingVertical: 8,
-    paddingHorizontal: 0,
-  },
-  dropdownField: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
-    paddingVertical: 8,
-  },
-  dropdownText: {
-    fontSize: 16,
-    fontFamily: 'Inter-Regular',
-    color: '#1A1A1A',
-  },
-  dropdownMenu: {
-    position: 'absolute',
-    top: 70,
-    left: 0,
-    right: 0,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-    zIndex: 1000,
-  },
-  dropdownOption: {
     paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-  },
-  dropdownOptionText: {
     fontSize: 16,
-    fontFamily: 'Inter-Regular',
-    color: '#1A1A1A',
+    color: "#1E293B",
   },
-  dropdownOptionSelected: {
-    color: '#2D63FF',
-    fontFamily: 'Inter-Medium',
+
+  readOnlyField: {
+    borderBottomWidth: 1,
+    borderBottomColor: "#E2E8F0",
+    paddingVertical: 12,
   },
-  bioSection: {
-    marginBottom: 24,
+  readOnlyText: {
+    fontSize: 16,
+    color: "#94A3B8",
   },
+
   bioInput: {
-    fontSize: 16,
-    fontFamily: 'Inter-Regular',
-    color: '#1A1A1A',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
-    paddingVertical: 8,
-    paddingHorizontal: 0,
-    minHeight: 40,
+    minHeight: 60,
+    textAlignVertical: "top",
   },
-  toggleSection: {
+
+  divider: {
+    height: 1,
+    backgroundColor: "#E2E8F0",
+    marginVertical: 24,
+  },
+
+  occupation: {},
+
+  radioGroup: {
+    flexDirection: "row",
+    gap: 32,
     marginBottom: 20,
   },
-  toggleContainer: {
-    flexDirection: 'row',
-    gap: 32,
-  },
-  toggleOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  radioButton: {
+    flexDirection: "row",
+    alignItems: "center",
     gap: 10,
   },
   radioOuter: {
@@ -407,45 +572,122 @@ const styles = StyleSheet.create({
     height: 22,
     borderRadius: 11,
     borderWidth: 2,
-    borderColor: '#CCCCCC',
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderColor: "#CBD5E1",
+    alignItems: "center",
+    justifyContent: "center",
   },
   radioOuterSelected: {
-    borderColor: '#2D63FF',
+    borderColor: "#3F51B5",
   },
   radioInner: {
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: '#2D63FF',
+    backgroundColor: "#3F51B5",
   },
-  toggleText: {
+  radioLabel: {
     fontSize: 16,
-    fontFamily: 'Inter-Regular',
-    color: '#1A1A1A',
+    color: "#1E293B",
   },
-  institutionSection: {
-    marginBottom: 20,
+
+  dropdown: {
+    borderBottomWidth: 1,
+    paddingVertical: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
-  buttonContainer: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: '#FFFFFF',
+  dropdownText: {
+    fontSize: 16,
+    color: "#1E293B",
   },
-  continueButton: {
-    backgroundColor: '#2D63FF',
-    borderRadius: 28,
-    paddingVertical: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
+
+  suggestionsContainer: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    maxHeight: 150,
   },
-  continueButtonText: {
+  suggestionItem: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F1F5F9",
+  },
+  suggestionText: {
+    fontSize: 14,
+    color: "#334155",
+  },
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
+  modalContent: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    width: "100%",
+    maxWidth: 340,
+    padding: 8,
+  },
+  modalTitle: {
     fontSize: 18,
-    fontFamily: 'Inter-SemiBold',
-    color: '#FFFFFF',
+    fontWeight: "600",
+    color: "#1E293B",
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F1F5F9",
   },
-  readOnlyInput: {
-    color: '#999999',
+  modalOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+  },
+  modalOptionSelected: {
+    backgroundColor: "#EEF2FF",
+  },
+  modalOptionText: {
+    fontSize: 16,
+    color: "#334155",
+  },
+  modalOptionTextSelected: {
+    color: "#3F51B5",
+    fontWeight: "500",
+  },
+  checkmark: {
+    fontSize: 16,
+    color: "#3F51B5",
+    fontWeight: "500",
+  },
+
+  footer: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 24,
+    backgroundColor: "#F8FAFC",
+  },
+  saveButton: {
+    backgroundColor: "#3F51B5",
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: "center",
+  },
+  saveText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#FFFFFF",
+  },
+  disabledButton: {
+    opacity: 0.6,
   },
 });
