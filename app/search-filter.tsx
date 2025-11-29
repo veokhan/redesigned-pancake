@@ -1,29 +1,52 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { ArrowLeft, Search } from 'lucide-react-native';
-import { Picker } from '@react-native-picker/picker';
+import { ArrowLeft, Search, ChevronDown, X } from 'lucide-react-native';
 
 export default function SearchFilterScreen() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCountry, setSelectedCountry] = useState('');
   const [selectedCity, setSelectedCity] = useState('');
   const [selectedGender, setSelectedGender] = useState('');
-  const [onlineInCity, setOnlineInCity] = useState(false);
+  const [minAge, setMinAge] = useState('');
+  const [maxAge, setMaxAge] = useState('');
+  const [occupationType, setOccupationType] = useState<'all' | 'education' | 'work'>('all');
+  const [selectedDegree, setSelectedDegree] = useState('');
+  const [onlineOnly, setOnlineOnly] = useState(false);
+  const [focusedField, setFocusedField] = useState<string | null>(null);
+  const [countryDropdownVisible, setCountryDropdownVisible] = useState(false);
+  const [genderDropdownVisible, setGenderDropdownVisible] = useState(false);
+  const [degreeDropdownVisible, setDegreeDropdownVisible] = useState(false);
 
-  const countries = ['', 'USA', 'Canada', 'UK', 'Australia', 'Germany', 'France', 'Japan', 'Brazil'];
-  const genders = ['', 'Male', 'Female', 'Non-binary'];
+  const countries = ['USA', 'Canada', 'UK', 'Australia', 'Germany', 'France', 'Japan', 'Brazil', 'Pakistan', 'India'];
+  const genders = ['Male', 'Female', 'Other'];
+  const degreeOptions = ['Primary', 'Middle', 'Matric', 'Intermediate', 'Bachelor', 'Master', 'PhD'];
+
+  const handleOccupationChange = (type: 'all' | 'education' | 'work') => {
+    setOccupationType(type);
+    if (type !== 'education') {
+      setSelectedDegree('');
+    }
+  };
 
   const handleApplyFilters = () => {
-    // TODO: Apply filters and return to explore page
-    console.log('Applying filters:', {
+    const filters: Record<string, any> = {
       searchTerm,
       selectedCountry,
       selectedCity,
       selectedGender,
-      onlineInCity
-    });
+      minAge,
+      maxAge,
+      occupationType,
+      onlineOnly
+    };
+    
+    if (occupationType === 'education' && selectedDegree) {
+      filters.selectedDegree = selectedDegree;
+    }
+    
+    console.log('Applying filters:', filters);
     router.back();
   };
 
@@ -32,7 +55,27 @@ export default function SearchFilterScreen() {
     setSelectedCountry('');
     setSelectedCity('');
     setSelectedGender('');
-    setOnlineInCity(false);
+    setMinAge('');
+    setMaxAge('');
+    setOccupationType('all');
+    setSelectedDegree('');
+    setOnlineOnly(false);
+  };
+
+  const getBorderColor = (field: string) =>
+    focusedField === field ? '#3F51B5' : '#CBD5E1';
+
+  const getActiveFiltersCount = () => {
+    let count = 0;
+    if (searchTerm) count++;
+    if (selectedCountry) count++;
+    if (selectedCity) count++;
+    if (selectedGender) count++;
+    if (minAge || maxAge) count++;
+    if (occupationType !== 'all') count++;
+    if (occupationType === 'education' && selectedDegree) count++;
+    if (onlineOnly) count++;
+    return count;
   };
 
   return (
@@ -42,23 +85,39 @@ export default function SearchFilterScreen() {
           style={styles.backButton}
           onPress={() => router.back()}
         >
-          <ArrowLeft color="#1A1A1A" size={24} />
+          <ArrowLeft color="#1E293B" size={24} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Search & Filter</Text>
+        {getActiveFiltersCount() > 0 && (
+          <View style={styles.filterBadge}>
+            <Text style={styles.filterBadgeText}>{getActiveFiltersCount()}</Text>
+          </View>
+        )}
       </View>
 
-      <ScrollView style={styles.content}>
+      <ScrollView 
+        style={styles.content}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 120 }}
+      >
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Search</Text>
-          <View style={styles.searchContainer}>
-            <Search color="#999999" size={20} />
+          <View style={[styles.searchContainer, focusedField === 'search' && styles.searchContainerFocused]}>
+            <Search color="#94A3B8" size={20} />
             <TextInput
               style={styles.searchInput}
               placeholder="Search by name or handle"
-              placeholderTextColor="#999999"
+              placeholderTextColor="#94A3B8"
               value={searchTerm}
               onChangeText={setSearchTerm}
+              onFocus={() => setFocusedField('search')}
+              onBlur={() => setFocusedField(null)}
             />
+            {searchTerm.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchTerm('')}>
+                <X color="#94A3B8" size={18} />
+              </TouchableOpacity>
+            )}
           </View>
         </View>
 
@@ -67,73 +126,303 @@ export default function SearchFilterScreen() {
           
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Country</Text>
-            <View style={styles.pickerContainer}>
-              <Picker
-                selectedValue={selectedCountry}
-                onValueChange={(itemValue) => setSelectedCountry(itemValue)}
-                style={styles.picker}
-              >
-                <Picker.Item label="All Countries" value="" />
-                {countries.slice(1).map((country) => (
-                  <Picker.Item key={country} label={country} value={country} />
-                ))}
-              </Picker>
-            </View>
+            <TouchableOpacity
+              style={[styles.dropdown, { borderBottomColor: getBorderColor('country') }]}
+              onPress={() => setCountryDropdownVisible(true)}
+            >
+              <Text style={[styles.dropdownText, !selectedCountry && styles.placeholderText]}>
+                {selectedCountry || 'All Countries'}
+              </Text>
+              <ChevronDown size={20} color="#64748B" />
+            </TouchableOpacity>
           </View>
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>City</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { borderBottomColor: getBorderColor('city') }]}
               placeholder="Enter city name"
-              placeholderTextColor="#999999"
+              placeholderTextColor="#94A3B8"
               value={selectedCity}
               onChangeText={setSelectedCity}
+              onFocus={() => setFocusedField('city')}
+              onBlur={() => setFocusedField(null)}
             />
           </View>
         </View>
+
+        <View style={styles.divider} />
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Demographics</Text>
           
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Gender</Text>
-            <View style={styles.pickerContainer}>
-              <Picker
-                selectedValue={selectedGender}
-                onValueChange={(itemValue) => setSelectedGender(itemValue)}
-                style={styles.picker}
-              >
-                <Picker.Item label="All Genders" value="" />
-                {genders.slice(1).map((gender) => (
-                  <Picker.Item key={gender} label={gender} value={gender} />
-                ))}
-              </Picker>
+            <TouchableOpacity
+              style={[styles.dropdown, { borderBottomColor: getBorderColor('gender') }]}
+              onPress={() => setGenderDropdownVisible(true)}
+            >
+              <Text style={[styles.dropdownText, !selectedGender && styles.placeholderText]}>
+                {selectedGender || 'All Genders'}
+              </Text>
+              <ChevronDown size={20} color="#64748B" />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Age Range</Text>
+            <View style={styles.ageRow}>
+              <View style={styles.ageInputContainer}>
+                <TextInput
+                  style={[styles.ageInput, { borderBottomColor: getBorderColor('minAge') }]}
+                  placeholder="Min"
+                  placeholderTextColor="#94A3B8"
+                  value={minAge}
+                  onChangeText={(text) => {
+                    const num = text.replace(/[^0-9]/g, '');
+                    if (num === '' || (parseInt(num) >= 0 && parseInt(num) <= 100)) {
+                      setMinAge(num);
+                    }
+                  }}
+                  keyboardType="numeric"
+                  maxLength={2}
+                  onFocus={() => setFocusedField('minAge')}
+                  onBlur={() => setFocusedField(null)}
+                />
+              </View>
+              <Text style={styles.ageSeparator}>to</Text>
+              <View style={styles.ageInputContainer}>
+                <TextInput
+                  style={[styles.ageInput, { borderBottomColor: getBorderColor('maxAge') }]}
+                  placeholder="Max"
+                  placeholderTextColor="#94A3B8"
+                  value={maxAge}
+                  onChangeText={(text) => {
+                    const num = text.replace(/[^0-9]/g, '');
+                    if (num === '' || (parseInt(num) >= 0 && parseInt(num) <= 100)) {
+                      setMaxAge(num);
+                    }
+                  }}
+                  keyboardType="numeric"
+                  maxLength={2}
+                  onFocus={() => setFocusedField('maxAge')}
+                  onBlur={() => setFocusedField(null)}
+                />
+              </View>
             </View>
           </View>
         </View>
+
+        <View style={styles.divider} />
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Education / Work</Text>
+          
+          <View style={styles.radioGroup}>
+            <TouchableOpacity
+              style={styles.radioButton}
+              onPress={() => handleOccupationChange('all')}
+            >
+              <View style={[styles.radioOuter, occupationType === 'all' && styles.radioOuterSelected]}>
+                {occupationType === 'all' && <View style={styles.radioInner} />}
+              </View>
+              <Text style={styles.radioLabel}>All</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.radioButton}
+              onPress={() => handleOccupationChange('education')}
+            >
+              <View style={[styles.radioOuter, occupationType === 'education' && styles.radioOuterSelected]}>
+                {occupationType === 'education' && <View style={styles.radioInner} />}
+              </View>
+              <Text style={styles.radioLabel}>Education</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.radioButton}
+              onPress={() => handleOccupationChange('work')}
+            >
+              <View style={[styles.radioOuter, occupationType === 'work' && styles.radioOuterSelected]}>
+                {occupationType === 'work' && <View style={styles.radioInner} />}
+              </View>
+              <Text style={styles.radioLabel}>Work</Text>
+            </TouchableOpacity>
+          </View>
+
+          {occupationType === 'education' && (
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Degree Level</Text>
+              <TouchableOpacity
+                style={[styles.dropdown, { borderBottomColor: getBorderColor('degree') }]}
+                onPress={() => setDegreeDropdownVisible(true)}
+              >
+                <Text style={[styles.dropdownText, !selectedDegree && styles.placeholderText]}>
+                  {selectedDegree || 'All Levels'}
+                </Text>
+                <ChevronDown size={20} color="#64748B" />
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+
+        <View style={styles.divider} />
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Status</Text>
           
           <TouchableOpacity
             style={styles.toggleContainer}
-            onPress={() => setOnlineInCity(!onlineInCity)}
+            onPress={() => setOnlineOnly(!onlineOnly)}
           >
-            <View style={[styles.toggle, onlineInCity && styles.toggleActive]}>
-              {onlineInCity && <View style={styles.toggleDot} />}
+            <View style={[styles.toggle, onlineOnly && styles.toggleActive]}>
+              <View style={[styles.toggleDot, onlineOnly && styles.toggleDotActive]} />
             </View>
-            <Text style={styles.toggleLabel}>Show only users online in my city</Text>
+            <Text style={styles.toggleLabel}>Show only online users</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
 
-      <View style={styles.buttonContainer}>
+      <Modal
+        visible={countryDropdownVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setCountryDropdownVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setCountryDropdownVisible(false)}
+        >
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Select Country</Text>
+            <ScrollView style={styles.modalScrollView} showsVerticalScrollIndicator={false}>
+              <TouchableOpacity
+                style={[styles.modalOption, selectedCountry === '' && styles.modalOptionSelected]}
+                onPress={() => {
+                  setSelectedCountry('');
+                  setCountryDropdownVisible(false);
+                }}
+              >
+                <Text style={[styles.modalOptionText, selectedCountry === '' && styles.modalOptionTextSelected]}>
+                  All Countries
+                </Text>
+                {selectedCountry === '' && <Text style={styles.checkmark}>✓</Text>}
+              </TouchableOpacity>
+              {countries.map((country) => (
+                <TouchableOpacity
+                  key={country}
+                  style={[styles.modalOption, selectedCountry === country && styles.modalOptionSelected]}
+                  onPress={() => {
+                    setSelectedCountry(country);
+                    setCountryDropdownVisible(false);
+                  }}
+                >
+                  <Text style={[styles.modalOptionText, selectedCountry === country && styles.modalOptionTextSelected]}>
+                    {country}
+                  </Text>
+                  {selectedCountry === country && <Text style={styles.checkmark}>✓</Text>}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      <Modal
+        visible={genderDropdownVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setGenderDropdownVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setGenderDropdownVisible(false)}
+        >
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Select Gender</Text>
+            <TouchableOpacity
+              style={[styles.modalOption, selectedGender === '' && styles.modalOptionSelected]}
+              onPress={() => {
+                setSelectedGender('');
+                setGenderDropdownVisible(false);
+              }}
+            >
+              <Text style={[styles.modalOptionText, selectedGender === '' && styles.modalOptionTextSelected]}>
+                All Genders
+              </Text>
+              {selectedGender === '' && <Text style={styles.checkmark}>✓</Text>}
+            </TouchableOpacity>
+            {genders.map((gender) => (
+              <TouchableOpacity
+                key={gender}
+                style={[styles.modalOption, selectedGender === gender && styles.modalOptionSelected]}
+                onPress={() => {
+                  setSelectedGender(gender);
+                  setGenderDropdownVisible(false);
+                }}
+              >
+                <Text style={[styles.modalOptionText, selectedGender === gender && styles.modalOptionTextSelected]}>
+                  {gender}
+                </Text>
+                {selectedGender === gender && <Text style={styles.checkmark}>✓</Text>}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      <Modal
+        visible={degreeDropdownVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setDegreeDropdownVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setDegreeDropdownVisible(false)}
+        >
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Select Degree Level</Text>
+            <TouchableOpacity
+              style={[styles.modalOption, selectedDegree === '' && styles.modalOptionSelected]}
+              onPress={() => {
+                setSelectedDegree('');
+                setDegreeDropdownVisible(false);
+              }}
+            >
+              <Text style={[styles.modalOptionText, selectedDegree === '' && styles.modalOptionTextSelected]}>
+                All Levels
+              </Text>
+              {selectedDegree === '' && <Text style={styles.checkmark}>✓</Text>}
+            </TouchableOpacity>
+            {degreeOptions.map((degree) => (
+              <TouchableOpacity
+                key={degree}
+                style={[styles.modalOption, selectedDegree === degree && styles.modalOptionSelected]}
+                onPress={() => {
+                  setSelectedDegree(degree);
+                  setDegreeDropdownVisible(false);
+                }}
+              >
+                <Text style={[styles.modalOptionText, selectedDegree === degree && styles.modalOptionTextSelected]}>
+                  {degree}
+                </Text>
+                {selectedDegree === degree && <Text style={styles.checkmark}>✓</Text>}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      <View style={styles.footer}>
         <TouchableOpacity
           style={styles.clearButton}
           onPress={handleClearFilters}
         >
-          <Text style={styles.clearButtonText}>Clear Filters</Text>
+          <Text style={styles.clearButtonText}>Clear All</Text>
         </TouchableOpacity>
         
         <TouchableOpacity
@@ -150,80 +439,149 @@ export default function SearchFilterScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F8FAFC',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 24,
     paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
   },
   backButton: {
     marginRight: 16,
   },
   headerTitle: {
-    fontSize: 18,
-    fontFamily: 'Inter-SemiBold',
-    color: '#1A1A1A',
-    textAlign: 'center',
     flex: 1,
-    marginRight: 40,
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#1E293B',
+  },
+  filterBadge: {
+    backgroundColor: '#3F51B5',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    minWidth: 24,
+    alignItems: 'center',
+  },
+  filterBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
   },
   content: {
     flex: 1,
     paddingHorizontal: 24,
   },
   section: {
-    marginVertical: 20,
+    marginVertical: 12,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontFamily: 'Inter-SemiBold',
-    color: '#1A1A1A',
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1E293B',
     marginBottom: 16,
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F5F7FA',
-    borderRadius: 12,
-    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#CBD5E1',
     paddingVertical: 12,
     gap: 12,
+  },
+  searchContainerFocused: {
+    borderBottomColor: '#3F51B5',
   },
   searchInput: {
     flex: 1,
     fontSize: 16,
-    fontFamily: 'Inter-Regular',
-    color: '#1A1A1A',
+    color: '#1E293B',
   },
   inputGroup: {
     marginBottom: 16,
   },
   label: {
     fontSize: 14,
-    fontFamily: 'Inter-Medium',
-    color: '#1A1A1A',
+    fontWeight: '500',
+    color: '#64748B',
     marginBottom: 8,
   },
   input: {
-    backgroundColor: '#F5F7FA',
-    borderRadius: 12,
-    paddingHorizontal: 16,
+    borderBottomWidth: 1,
     paddingVertical: 12,
     fontSize: 16,
-    fontFamily: 'Inter-Regular',
-    color: '#1A1A1A',
+    color: '#1E293B',
   },
-  pickerContainer: {
-    backgroundColor: '#F5F7FA',
-    borderRadius: 12,
-    overflow: 'hidden',
+  dropdown: {
+    borderBottomWidth: 1,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  picker: {
-    height: 48,
+  dropdownText: {
+    fontSize: 16,
+    color: '#1E293B',
+  },
+  placeholderText: {
+    color: '#94A3B8',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#E2E8F0',
+    marginVertical: 8,
+  },
+  ageRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  ageInputContainer: {
+    flex: 1,
+  },
+  ageInput: {
+    borderBottomWidth: 1,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: '#1E293B',
+    textAlign: 'center',
+  },
+  ageSeparator: {
+    fontSize: 14,
+    color: '#64748B',
+  },
+  radioGroup: {
+    flexDirection: 'row',
+    gap: 24,
+    marginBottom: 20,
+  },
+  radioButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  radioOuter: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 2,
+    borderColor: '#CBD5E1',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  radioOuterSelected: {
+    borderColor: '#3F51B5',
+  },
+  radioInner: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#3F51B5',
+  },
+  radioLabel: {
+    fontSize: 16,
+    color: '#1E293B',
   },
   toggleContainer: {
     flexDirection: 'row',
@@ -231,57 +589,114 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   toggle: {
-    width: 44,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#E0E0E0',
+    width: 48,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#CBD5E1',
     padding: 2,
     justifyContent: 'center',
   },
   toggleActive: {
-    backgroundColor: '#2D63FF',
-    alignItems: 'flex-end',
+    backgroundColor: '#3F51B5',
   },
   toggleDot: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     backgroundColor: '#FFFFFF',
+  },
+  toggleDotActive: {
+    alignSelf: 'flex-end',
   },
   toggleLabel: {
     fontSize: 16,
-    fontFamily: 'Inter-Regular',
-    color: '#1A1A1A',
+    color: '#1E293B',
   },
-  buttonContainer: {
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    width: '100%',
+    maxWidth: 340,
+    maxHeight: '70%',
+    padding: 8,
+  },
+  modalScrollView: {
+    maxHeight: 300,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1E293B',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  modalOption: {
     flexDirection: 'row',
-    paddingHorizontal: 24,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+  },
+  modalOptionSelected: {
+    backgroundColor: '#EEF2FF',
+  },
+  modalOptionText: {
+    fontSize: 16,
+    color: '#334155',
+  },
+  modalOptionTextSelected: {
+    color: '#3F51B5',
+    fontWeight: '500',
+  },
+  checkmark: {
+    fontSize: 16,
+    color: '#3F51B5',
+    fontWeight: '500',
+  },
+  footer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    padding: 24,
     paddingBottom: 40,
+    backgroundColor: '#F8FAFC',
     gap: 12,
   },
   clearButton: {
     flex: 1,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 16,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
   },
   clearButtonText: {
     fontSize: 16,
-    fontFamily: 'Inter-SemiBold',
-    color: '#666666',
+    fontWeight: '600',
+    color: '#64748B',
   },
   applyButton: {
     flex: 1,
-    backgroundColor: '#2D63FF',
-    borderRadius: 16,
+    backgroundColor: '#3F51B5',
+    borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
   },
   applyButtonText: {
     fontSize: 16,
-    fontFamily: 'Inter-SemiBold',
+    fontWeight: '600',
     color: '#FFFFFF',
   },
 });
